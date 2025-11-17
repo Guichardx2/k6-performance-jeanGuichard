@@ -1,34 +1,24 @@
-import { htmlReport } from 'https://raw.githubusercontent.com/benc-uk/k6-reporter/latest/dist/bundle.js';
-import { textSummary } from 'https://jslib.k6.io/k6-summary/0.0.1/index.js';
 import http from 'k6/http';
 import { check } from 'k6';
 import { Trend, Rate } from 'k6/metrics';
 
-export const getContactsDuration = new Trend('get_contacts', true);
-export const RateContentOK = new Rate('content_OK');
+const getProductsDuration = new Trend('get_products_duration');
+const RateContentOK = new Rate('rate_content_ok');
 
 export const options = {
-  thresholds: {
-    http_req_failed: ['rate<0.30'],
-    get_contacts: ['p(99)<500'],
-    content_OK: ['rate>0.95']
-  },
   stages: [
-    { duration: '3s', target: 2 },
-    { duration: '3s', target: 6 },
-    { duration: '3s', target: 9 }
-  ]
+    { duration: '1m', target: 7 },
+    { duration: '1m30s', target: 92 },
+    { duration: '1m', target: 92 }
+  ],
+  thresholds: {
+    'get_products_duration': ['p(90)<6800'],
+    'rate_content_ok': ['rate>0.75']
+  }
 };
 
-export function handleSummary(data) {
-  return {
-    './src/output/index.html': htmlReport(data),
-    stdout: textSummary(data, { indent: ' ', enableColors: true })
-  };
-}
-
 export default function () {
-  const baseUrl = 'https://test.k6.io/';
+  const baseUrl = 'https://dummyjson.com/products';
 
   const params = {
     headers: {
@@ -40,11 +30,11 @@ export default function () {
 
   const res = http.get(`${baseUrl}`, params);
 
-  getContactsDuration.add(res.timings.duration);
+  getProductsDuration.add(res.timings.duration);
 
   RateContentOK.add(res.status === OK);
 
   check(res, {
-    'GET Contacts - Status 200': () => res.status === OK
+    'GET Products - Status 200': () => res.status === OK
   });
 }
